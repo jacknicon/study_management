@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Log Sync</title>
+    <!-- Google Fonts: 読みやすくてモダンなフォント -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* --- CSS スタイル定義 --- */
+      :root {
+        /* カラーパレット: 青とグレーを基調とした清潔感のある配色 */
+        --primary-color: #007bff; /* メインの青色 */
+        --primary-hover: #0056b3; /* ボタンホバー時の濃い青 */
+        --secondary-color: #6c757d; /* グレー（サブテキスト、キャンセル用） */
+        --bg-color: #f4f7f6; /* 背景色（薄いグレー） */
+        --card-bg: #ffffff; /* カード背景（白） */
+        --text-color: #333333; /* 基本文字色 */
+        --danger-color: #dc3545; /* 削除・停止用（赤） */
+        --success-color: #28a745; /* 完了・開始用（緑） */
+        --border-radius: 12px; /* 角丸のサイズ */
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", sans-serif;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        padding-bottom: 80px; /* 下部ナビゲーション分の余白 */
+        min-height: 100vh;
+      }
+
+      /* --- ヘッダー --- */
+      header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      /* --- ナビゲーション（タブ） --- */
+      .nav-tabs {
+        display: flex;
+        justify-content: space-around;
+        background-color: var(--card-bg);
+        padding: 10px 0;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        z-index: 100;
+      }
+
+      .nav-item {
+        flex: 1;
+        text-align: center;
+        padding: 10px;
+        cursor: pointer;
+        color: var(--secondary-color);
+        font-weight: 600;
+        transition: color 0.3s;
+      }
+
+      .nav-item.active {
+        color: var(--primary-color);
+        border-bottom: 3px solid var(--primary-color);
+      }
+
+      /* --- メインコンテンツ --- */
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px 15px;
+      }
+
+      /* ビューの表示制御 */
+      .view-section {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+      }
+      .view-section.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* --- カードスタイル --- */
+      .card {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      /* --- 入力フォーム --- */
+      .form-group {
+        margin-bottom: 15px;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: var(--secondary-color);
+      }
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        background-color: #f9f9f9;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--primary-color);
+        outline: none;
+      }
+
+      /* --- ボタン --- */
+      .btn {
+        display: inline-block;
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        background-color: var(--primary-color);
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        text-align: center;
+      }
+      .btn:hover {
+        background-color: var(--primary-hover);
+      }
+      .btn-gap {
+        display: inline-block;
+        width: auto;
+        padding: 5px 10px;
+        margin-right: 5px;
+        background-color: #e9ecef;
+        color: var(--text-color);
+        font-size: 14px;
+        border-radius: 20px;
+      }
+      .btn-start {
+        background-color: var(--success-color);
+        margin-top: 10px;
+      }
+      .btn-delete {
+        background-color: #fff;
+        color: var(--danger-color);
+        border: 1px solid var(--danger-color);
+        margin-top: 5px;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+        width: auto;
+      }
+
+      /* --- リストアイテム --- */
+      .task-item,
+      .log-item {
+        border-bottom: 1px solid #eee;
+        padding: 12px 0;
+      }
+      .task-item:last-child,
+      .log-item:last-child {
+        border-bottom: none;
+      }
+      .task-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+      .tag-badge {
+        background-color: #e3f2fd;
+        color: var(--primary-color);
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-right: 8px;
+      }
+      /* カテゴリごとの色 */
+      .start-btn-wrapper {
+        margin-top: 8px;
+      }
+
+      /* --- タイマー画面 --- */
+      .timer-display {
+        font-size: 4rem;
+        font-weight: 800;
+        text-align: center;
+        margin: 30px 0;
+        color: var(--text-color);
+        letter-spacing: 2px;
+      }
+      .timer-controls {
+        display: flex;
+        gap: 10px;
+      }
+      .timer-status {
+        text-align: center;
+        margin-bottom: 10px;
+        color: var(--secondary-color);
+        font-weight: 600;
+      }
+      .current-task-info {
+        background-color: #e8f0fe;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+        border-left: 5px solid var(--primary-color);
+      }
+
+      /* --- ログ画面 --- */
+      .progress-container {
+        margin-top: 10px;
+      }
+      progress {
+        width: 100%;
+        height: 20px;
+        border-radius: 10px;
+      }
+      .cheer-message {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        text-align: center;
+        font-weight: 600;
+        display: none; /* 初期状態では非表示 */
+      }
+      .log-date {
+        font-size: 12px;
+        color: var(--secondary-color);
+      }
+      .log-memo {
+        font-size: 14px;
+        color: #555;
+        background-color: #f8f9fa;
+        padding: 5px;
+        border-radius: 4px;
+        margin-top: 5px;
+      }
+      .completed-check {
+        text-decoration: line-through;
+        color: var(--secondary-color);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ヘッダーエリア -->
+    <header>
+        <h1>Study Log Sync</h1>
+        <div style="font-size: 0.9rem; opacity: 0.9;">
+            本日の合計: <span id="header-total-time">0</span> 分
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <div class="container">
+
+        <!-- ===== 1. Plan View (ToDo管理) ===== -->
+        <section id="plan-view" class="view-section active">
+            <div class="card">
+                <h3>新しいタスクを追加</h3>
+                <div class="form-group">
+                    <label>科目・カテゴリ</label>
+                    <div style="display: flex; gap: 5px;">
+                        <select id="task-tag" style="flex: 1;">
+                            <!-- カテゴリはJSで生成 -->
+                        </select>
+                        <button class="btn" style="width: auto; padding: 0 15px; font-size: 1.2rem;" onclick="addCategory()">＋</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>詳細・サブカテゴリ <span style="font-size:0.8em; color:#888; font-weight:normal;">(任意: 線形代数, 英単語など)</span></label>
+                    <input type="text" id="task-subtag" placeholder="例: ベクトル">
+                </div>
+                <div class="form-group">
+                    <label>学習内容・タイトル</label>
+                    <input type="text" id="task-title" placeholder="例: 数学 レポート作成">
+                </div>
+                <button class="btn" onclick="addTask()">リストに追加</button>
+            </div>
+
+            <h3>未完了タスク</h3>
+            <div id="task-list" class="card">
+                <!-- タスク一覧がここに表示されます -->
+                <p style="text-align: center; color: #888;">タスクはありません</p>
+            </div>
+
+            <h3 style="margin-top: 30px; color: #6c757d; font-size: 1.1rem;">完了済みタスク</h3>
+            <div id="completed-task-list" class="card">
+                <!-- 完了タスク一覧がここに表示されます -->
+            </div>
+        </section>
+
+
+        <!-- ===== 2. Focus View (ポモドーロタイマー) ===== -->
+        <section id="focus-view" class="view-section">
+            <div id="current-task-display" class="current-task-info" style="display:none;">
+                <span class="tag-badge" id="focus-tag">科目</span>
+                <span style="font-size: 0.9rem; color: #666; margin-right: 5px;" id="focus-subtag"></span>
+                <span id="focus-title">タイトル</span>
+            </div>
+
+            <div class="card">
+                <div class="timer-status" id="timer-mode">FOCUS (集中)</div>
+                <div class="timer-display" id="timer-display">25:00</div>
+                
+                <div class="timer-controls">
+                    <button class="btn" style="background-color: #28a745;" onclick="startTimer()">Start</button>
+                    <button class="btn" style="background-color: #ffc107; color: #333;" onclick="pauseTimer()">Pause</button>
+                    <button class="btn" style="background-color: #dc3545;" onclick="resetTimer()">Reset</button>
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 5px;">
+                    <button class="btn btn-sm" style="background-color: #6c757d;" onclick="setTimer(25)">25分</button>
+                    <button class="btn btn-sm" style="background-color: #6c757d;" onclick="setTimer(5)">5分</button>
+                </div>
+            </div>
+
+            <!-- 学習完了記録フォーム（手動でも使用可能） -->
+            <div class="card">
+                <h3>学習記録を完了する</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">
+                    タイマー終了または手動でここから記録できます。
+                </p>
+                <div class="form-group">
+                    <label>実施時間 (分)</label>
+                    <input type="number" id="log-time" placeholder="0">
+                    <div style="margin-top: 5px;">
+                        <button class="btn-gap" onclick="setTime(5)">+5分</button>
+                        <button class="btn-gap" onclick="setTime(10)">+10分</button>
+                        <button class="btn-gap" onclick="setTime(15)">+15分</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>今日の一言メモ・感情</label>
+                    <textarea id="log-memo" rows="2" placeholder="集中できた！難しかった...など"></textarea>
+                </div>
+                <button class="btn" onclick="saveLogFromFocus()">記録を保存して完了にする</button>
+            </div>
+        </section>
+
+
+        <!-- ===== 3. Log View (履歴・振り返り) ===== -->
+        <section id="log-view" class="view-section">
+            <div class="card">
+                <h3>今週の進捗</h3>
+                <div class="progress-container">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                        <span>現在の合計: <span id="week-total">0</span>分</span>
+                        <span>目標: 600分 (10時間)</span>
+                    </div>
+                    <progress id="weekly-progress" value="0" max="600"></progress>
+                </div>
+            </div>
+
+            <div id="list-cheer-msg" class="cheer-message">
+                🎉 素晴らしい集中力です！この調子で頑張りましょう！
+            </div>
+
+            <h3>学習履歴</h3>
+            <div id="log-list" class="card">
+                <!-- ログ一覧がここに表示されます -->
+                <p style="text-align: center; color: #888;">まだ履歴はありません</p>
+            </div>
+
+            <h3 style="margin-top: 30px; font-size: 1.1rem; color: #666;">設定・データ管理</h3>
+            <div class="card">
+                <p style="font-size: 0.9rem; color: #555; margin-bottom: 15px;">
+                    データは全てこのブラウザ内(LocalStorage)にのみ保存されています。<br>
+                    外部サーバーには送信されません。
+                </p>
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button class="btn" style="background-color: #17a2b8;" onclick="exportData()">💾 データを保存 (JSONエクスポート)</button>
+                    
+                    <div style="border-top: 1px solid #eee; padding-top: 10px; margin-top: 5px;">
+                        <label style="font-size: 0.9rem;">データを復元 (インポート)</label>
+                        <input type="file" id="import-file" accept=".json" style="margin-bottom: 5px;">
+                        <button class="btn" style="background-color: #6c757d;" onclick="importData()">📂 ファイルから復元</button>
+                    </div>
+                    
+                    <button class="btn btn-delete" style="margin-top: 10px;" onclick="clearAllData()">⚠️ 全データを削除</button>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- 下部ナビゲーションタブ -->
+    <nav class="nav-tabs">
+        <div class="nav-item active" onclick="switchTab('plan', this)">
+            <span>📝 Plan</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('focus', this)">
+            <span>⏱️ Focus</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('log', this)">
+            <span>📊 Log</span>
+        </div>
+    </nav>
+
+
+    <!-- JavaScript ロジック -->
+    <script>
+        // --- 1. データ管理 ---
+        // デフォルトカテゴリ
+        const DEFAULT_CATEGORIES = ["大学課題", "資格勉強", "読書", "プログラミング", "その他"];
+        
+        // LocalStorageキー
+        const KEY_TASKS = 'studyTasks';
+        const KEY_LOGS = 'studyLogs';
+        const KEY_CATS = 'studyCategories';
+
+        let tasks = JSON.parse(localStorage.getItem(KEY_TASKS)) || [];
+        let logs = JSON.parse(localStorage.getItem(KEY_LOGS)) || [];
+        let categories = JSON.parse(localStorage.getItem(KEY_CATS)) || DEFAULT_CATEGORIES;
+        
+        let timerInterval;
+        let timeLeft = 25 * 60; // 秒単位
+        let isRunning = false;
+        let activeTaskId = null; // 現在Focus中のタスクID
+
+        // 初期表示処理
+        window.addEventListener('DOMContentLoaded', () => {
+            renderCategories();
+            renderTasks();
+            renderLogs();
+            updateTotalMetrics();
+        });
+
+        // --- 2. ビュー切り替え ---
+        function switchTab(viewId, navElement) {
+            // タブのアクティブ表示切り替え
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            navElement.classList.add('active');
+
+            // ビューの切り替え
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId + '-view').classList.add('active');
+        }
+
+        // --- 2.5 カテゴリ管理 ---
+        function renderCategories() {
+            const select = document.getElementById('task-tag');
+            select.innerHTML = '';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                select.appendChild(option);
+            });
+        }
+
+        function addCategory() {
+            const newCat = prompt("新しいカテゴリ名を入力してください:");
+            if (newCat && newCat.trim() !== "") {
+                if (!categories.includes(newCat.trim())) {
+                    categories.push(newCat.trim());
+                    localStorage.setItem(KEY_CATS, JSON.stringify(categories));
+                    renderCategories();
+                    // 新しいカテゴリを選択状態にする
+                    document.getElementById('task-tag').value = newCat.trim();
+                } else {
+                    alert("そのカテゴリは既に存在します");
+                }
+            }
+        }
+
+        // --- 3. Plan (ToDo) 機能 ---
+        function addTask() {
+            const titleInput = document.getElementById('task-title');
+            const tagInput = document.getElementById('task-tag');
+            const subTagInput = document.getElementById('task-subtag');
+            
+            const title = titleInput.value.trim();
+            if (!title) {
+                alert('タイトルを入力してください');
+                return;
+            }
+
+            const newTask = {
+                id: Date.now(),
+                title: title,
+                tag: tagInput.value,
+                subTag: subTagInput.value.trim(), // サブカテゴリ追加
+                status: 'todo',
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            tasks.push(newTask);
+            saveData();
+            renderTasks();
+            
+            titleInput.value = ''; // 入力欄クリア
+            subTagInput.value = '';
+        }
+
+        function renderTasks() {
+            const listContainer = document.getElementById('task-list');
+            const completedContainer = document.getElementById('completed-task-list');
+            
+            listContainer.innerHTML = '';
+            completedContainer.innerHTML = '';
+
+            const todoTasks = tasks.filter(t => t.status === 'todo');
+            const doneTasks = tasks.filter(t => t.status === 'done');
+
+            // ヘルパー：サブカテゴリ表示用HTML生成
+            const getSubTagHtml = (task) => task.subTag ? `<span style="font-size:0.85rem; color:#666; margin-left:5px;">(${task.subTag})</span>` : '';
+
+            // 未完了タスクの描画
+            if (todoTasks.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 10px;">未完了のタスクはありません</p>';
+            } else {
+                todoTasks.forEach(task => {
+                    const isFocusing = (activeTaskId === task.id);
+                    const div = document.createElement('div');
+                    div.className = 'task-item';
+                    div.innerHTML = `
+                        <div class="task-header">
+                            <div>
+                                <span class="tag-badge">${task.tag}</span>
+                                <strong>${task.title}</strong>
+                                ${getSubTagHtml(task)}
+                                ${isFocusing ? '<span style="color:#28a745; font-size:0.8rem; margin-left:5px;">(実行中)</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="start-btn-wrapper">
+                            ${!isFocusing ? `<button class="btn btn-sm btn-start" onclick="startTask(${task.id})">▶ 学習を開始する</button>` : ''}
+                            <button class="btn btn-sm btn-delete" onclick="deleteTask(${task.id})" style="margin-left: 5px; float: right;">削除</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(div);
+                });
+            }
+
+            // 完了済みタスクの描画
+            if (doneTasks.length === 0) {
+                completedContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 10px;">完了したタスクはありません</p>';
+            } else {
+                doneTasks.forEach(task => {
+                    const div = document.createElement('div');
+                    div.className = 'task-item';
+                    div.style.opacity = '0.7';
+                    div.innerHTML = `
+                        <div class="task-header">
+                            <div>
+                                <span class="tag-badge" style="background-color:#ccc; color:#666;">${task.tag}</span>
+                                <span style="text-decoration: line-through;">${task.title}</span>
+                                ${getSubTagHtml(task)}
+                                <span style="color:#28a745; font-size:0.8rem; margin-left:5px;">(完了)</span>
+                            </div>
+                            <button class="btn btn-sm btn-delete" onclick="deleteTask(${task.id})" style="width:auto;">削除</button>
+                        </div>
+                    `;
+                    completedContainer.appendChild(div);
+                });
+            }
+        }
+
+        function deleteTask(id) {
+            if(confirm('本当に削除しますか？')) {
+                tasks = tasks.filter(t => t.id !== id);
+                saveData();
+                renderTasks();
+            }
+        }
+
+        // --- 4. Focus (タイマー) 機能 ---
+        function startTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if(task) {
+                activeTaskId = task.id;
+                document.getElementById('focus-tag').textContent = task.tag;
+                document.getElementById('focus-subtag').textContent = task.subTag ? `(${task.subTag})` : '';
+                document.getElementById('focus-title').textContent = task.title;
+                document.getElementById('current-task-display').style.display = 'block';
+                
+                const focusTab = document.querySelectorAll('.nav-item')[1];
+                switchTab('focus', focusTab);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('timer-display').textContent = 
+                `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            document.title = `${m}:${s} - Study Log Sync`; 
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    stopTimer();
+                    alert('お疲れ様でした！タイマー終了です。記録を残しましょう。');
+                }
+            }, 1000);
+        }
+
+        function stopTimer() { // 共通停止処理
+            clearInterval(timerInterval);
+            isRunning = false;
+        }
+
+        function pauseTimer() {
+            stopTimer();
+        }
+
+        function resetTimer() {
+            stopTimer();
+            timeLeft = 25 * 60; 
+            updateTimerDisplay();
+        }
+
+        function setTimer(minutes) {
+            stopTimer();
+            timeLeft = minutes * 60;
+            updateTimerDisplay();
+            document.getElementById('timer-mode').textContent = minutes === 25 ? 'FOCUS (集中)' : 'BREAK (休憩)';
+        }
+
+        function setTime(addMinutes) {
+            const input = document.getElementById('log-time');
+            let current = parseInt(input.value) || 0;
+            input.value = current + addMinutes;
+        }
+
+        // --- 5. Log (記録) 機能 ---
+        function saveLogFromFocus() {
+            const timeInput = document.getElementById('log-time');
+            const memoInput = document.getElementById('log-memo');
+            const time = parseInt(timeInput.value);
+
+            if (!time || time <= 0) {
+                alert('学習時間を入力してください');
+                return;
+            }
+
+            let logTag = "その他";
+            let logSubTag = "";
+            let logTitle = "自主学習";
+
+            if (activeTaskId) {
+                const task = tasks.find(t => t.id === activeTaskId);
+                if (task) {
+                    logTag = task.tag;
+                    logSubTag = task.subTag || "";
+                    logTitle = task.title;
+                    task.status = 'done'; 
+                }
+                activeTaskId = null; 
+                document.getElementById('current-task-display').style.display = 'none';
+            } else {
+                // Focusからの直接記録の場合、Planの設定は使わずデフォルト（必要ならここも入力可能にすべきだが今回は簡易版）
+            }
+
+            const newLog = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString(), 
+                time: time,
+                memo: memoInput.value,
+                tag: logTag,
+                subTag: logSubTag,
+                title: logTitle
+            };
+
+            logs.unshift(newLog); 
+            saveData();
+            
+            timeInput.value = '';
+            memoInput.value = '';
+            resetTimer();
+
+            const logTab = document.querySelectorAll('.nav-item')[2];
+            switchTab('log', logTab);
+            renderLogs();
+            renderTasks(); 
+        }
+
+        function renderLogs() {
+            const listContainer = document.getElementById('log-list');
+            listContainer.innerHTML = '';
+
+            if (logs.length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #888; padding: 10px;">まだ履歴はありません</p>';
+                return;
+            }
+
+            logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = 'log-item';
+                div.innerHTML = `
+                    <div class="task-header">
+                        <div>
+                            <span class="log-date">${log.date}</span>
+                            <span class="tag-badge" style="background-color: #eee; color: #555;">${log.tag}</span>
+                            ${log.subTag ? `<span style="font-size:0.8rem; color:#888;">(${log.subTag})</span>` : ''}
+                            <span style="font-weight:600;">${log.title}</span>
+                        </div>
+                        <div style="font-weight: bold; color: var(--primary-color);">
+                            ${log.time}分
+                        </div>
+                    </div>
+                    <div class="log-memo">📝 ${log.memo || 'メモなし'}</div>
+                    <button class="btn btn-sm btn-delete" style="width:auto; margin-top:5px;" onclick="deleteLog(${log.id})">削除</button>
+                `;
+                listContainer.appendChild(div);
+            });
+
+            updateTotalMetrics();
+        }
+
+        function deleteLog(id) {
+            if(confirm('記録を削除しますか？')) {
+                logs = logs.filter(l => l.id !== id);
+                saveData();
+                renderLogs();
+            }
+        }
+
+        function updateTotalMetrics() {
+            const total = logs.reduce((sum, log) => sum + log.time, 0);
+            document.getElementById('header-total-time').textContent = total;
+            document.getElementById('week-total').textContent = total;
+            document.getElementById('weekly-progress').value = total;
+
+            const cheerMsg = document.getElementById('list-cheer-msg');
+            if (total >= 60) {
+                cheerMsg.style.display = 'block';
+            } else {
+                cheerMsg.style.display = 'none';
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(KEY_TASKS, JSON.stringify(tasks));
+            localStorage.setItem(KEY_LOGS, JSON.stringify(logs));
+        }
+
+        // --- 6. データ管理 (Export/Import) ---
+        function exportData() {
+            const data = {
+                tasks: tasks,
+                logs: logs,
+                categories: categories
+            };
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `study_log_backup_${new Date().toLocaleDateString().replace(/\//g, '')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const fileInput = document.getElementById('import-file');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("ファイルを選択してください");
+                return;
+            }
+
+            if (!confirm("現在のデータは上書きされます。よろしいですか？")) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if (data.tasks && data.logs && data.categories) {
+                        localStorage.setItem(KEY_TASKS, JSON.stringify(data.tasks));
+                        localStorage.setItem(KEY_LOGS, JSON.stringify(data.logs));
+                        localStorage.setItem(KEY_CATS, JSON.stringify(data.categories));
+                        
+                        alert("データの復元が完了しました。ページをリロードします。");
+                        location.reload();
+                    } else {
+                        alert("ファイル形式が正しくありません。");
+                    }
+                } catch (error) {
+                    alert("JSONファイルの読み込みに失敗しました。");
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (confirm("全てのデータを削除します。この操作は取り消せません。\n本当によろしいですか？")) {
+                localStorage.clear();
+                alert("全データを削除しました。初期状態に戻ります。");
+                location.reload();
+            }
+        }
+
+    </script>
+  </body>
+</html>
