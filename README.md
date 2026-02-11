@@ -98,4 +98,5 @@
 
 ---
 
-Created by: [あなたの名前]
+Created by: [takanabento]
+
